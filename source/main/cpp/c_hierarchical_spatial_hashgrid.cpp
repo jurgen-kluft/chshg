@@ -14,6 +14,8 @@ namespace ncore
             grid_t();
             grid_t(index_t* const _cells, const cell_t _cells_side);
 
+            DCORE_CLASS_PLACEMENT_NEW_DELETE
+
             index_t* const  cells;
             cell_t const    cells_side;
             cell_sq_t const cells_sq;
@@ -25,6 +27,8 @@ namespace ncore
             index_t         entities_len;
         };
 
+        // A cell will hold a doubly linked list of entities, this is a part of an entity
+        // used as a node in the doubly linked list.
         struct entity_node_t
         {
             index_t next;
@@ -36,6 +40,8 @@ namespace ncore
         public:
             hshg_t();
             hshg_t(index_t* _cells, grid_t* _grids, u32 _size, cell_sq_t _cells_len, u8 _grids_len, cell_sq_t _grid_size, u32 _max_entities);
+
+            DCORE_CLASS_PLACEMENT_NEW_DELETE
 
             //
             //  Creates a new HSHG.
@@ -82,6 +88,7 @@ namespace ncore
 
             void destroy_entity(index_t entity_id)
             {
+                m_entities_used--;
                 m_free_entities.set_free(entity_id);
                 m_used_entities.set_used(entity_id);
             }
@@ -264,7 +271,7 @@ namespace ncore
             }
 
             void*         instance_mem = allocator->allocate(sizeof(hshg_t));
-            hshg_t* const hshg         = new (signature_t(), instance_mem) hshg_t(cells, grids, _size, cells_len, grids_len, grid_size, _max_entities);
+            hshg_t* const hshg         = new (instance_mem) hshg_t(cells, grids, _size, cells_len, grids_len, grid_size, _max_entities);
             if (hshg == nullptr)
             {
                 allocator->deallocate(cells);
@@ -295,7 +302,7 @@ namespace ncore
             for (u8 i = 0; i < grids_len; ++i)
             {
                 void* gridmem = hshg->m_grids + i;
-                new (signature_t(), gridmem) grid_t(hshg->m_cells + idx, iside);
+                new (gridmem) grid_t(hshg->m_cells + idx, iside);
                 idx += (cell_sq_t)iside * iside * iside;
                 iside >>= 1;
                 isize <<= 1;
@@ -389,24 +396,29 @@ namespace ncore
             index_t const        idx         = entity_id;
             entity_t* const      entity      = m_entities + idx;
             entity_node_t* const entity_node = m_entities_node + idx;
-            u8* const            entity_grid = m_entities_grid + idx;
+            u8 const             entity_grid = m_entities_grid[idx];
 
-            grid_t* const grid = m_grids + *entity_grid;
+            grid_t* const grid = m_grids + entity_grid;
 
-            if (entity_node->prev == c_invalid_index)
+            if (entity_node->next != c_invalid_index)
             {
-                grid->cells[m_entities_cell[idx]] = entity_node->next;
+                m_entities_node[entity_node->next].prev = entity_node->prev;
             }
-            else
+            if (entity_node->prev != c_invalid_index)
             {
                 m_entities_node[entity_node->prev].next = entity_node->next;
             }
-            m_entities_node[entity_node->next].prev = entity_node->prev;
+            else
+            {
+                // we are at the head of the list, so update the grid cell
+                grid->cells[m_entities_cell[idx]] = entity_node->next;
+            }
 
             --grid->entities_len;
             if (grid->entities_len == 0)
             {
-                m_new_cache ^= (u32)1 << *entity_grid;
+                // There are no more entities in the grid, so we need to update the cache
+                m_new_cache ^= (u32)1 << entity_grid;
             }
         }
 
@@ -969,6 +981,6 @@ namespace ncore
             hshg->m_entities_grid = entities_grid;
             hshg->m_entities_ref  = entities_ref;
         }
-
     }  // namespace nhshg
+
 }  // namespace ncore

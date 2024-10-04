@@ -2,6 +2,10 @@
 
 3D Hierarchical Spatial HashGrid C++ library.
 
+## TODO
+
+Make the size and cell size of the HSHG per dimension, not just one size for all dimensions.
+
 ## Behind the scenes
 
 This section does not document API functions, however you should read this before trying to use the library.
@@ -24,7 +28,7 @@ You are free to insert entities that are orders of magnitude bigger than the lar
 
 All entities are stored in one big array that has a fixed size.
 
-Entities may only be altered in `hshg_update()` (`hshg.update`). In all other callbacks, they are read-only. To apply velocity changes that happen during collision or any other changes, you must offload them to some external object that's linked to the HSHG's internal representation of an entity. To do that, insert an entity with its `ref` member set to something that lets you point to the object that the entity owns . This can be done with a simple array holding objects and `ref` being an integer index. You can then access `ref` from within the `hshg.update` callback. Trying to change HSHG's entities while in `hshg.collide` or `hshg.query` will lead to unwanted results, like inaccurate collisions and queries.
+Entities may only be altered through `hshg_update()`. In all other callbacks, they are read-only. To apply velocity changes that happen during collision or any other changes, you must offload them to some external object that's linked to the HSHG's internal representation of an entity. To do that, insert an entity with its `ref` member set to something that lets you point to the object that the entity owns. This can be done with a simple array holding objects and `ref` being an integer index. You can then access `ref` from within the `hshg_update` callback. Trying to change HSHG's entities while in `hshg_collide` or `hshg_query` will lead to unwanted results, like inaccurate collisions and queries.
 
 ### Pitfalls
 
@@ -61,55 +65,30 @@ Entities may only be altered in `hshg_update()` (`hshg.update`). In all other ca
 
 ## API
 
-There's no separate headers and source files keeping separate versions of different dimensions. Instead, you need to declare which dimension you want to get definitions for, and whether or not you want the definitions to be stripped of the annoying dimension addon. If you only plan on using one dimension, you can strip the suffix, otherwise you must keep it so that you will be able to use multiple definitions simultaneously.
-
-```c
-#define HSHG_D 2
-#define HSHG_UNIFORM
-
-#include "hshg.c"
-```
-
-You include `c_hierarchical_spatial_hashgrid.h`.
-
-```c
+```c++
 #include "chshg/c_hierarchical_spatial_hashgrid.h"
 
-/* BOTH OF THE BELOW MUST BE POWERS OF 2! */
+// BOTH OF THE BELOW MUST BE POWERS OF 2!
 
-/* The number of cells on one side of the first,
-"tightest" grid (most cells on axis, least cell size).
-Square that, and you get the total number of cells. */
+// The number of cells on one side of the first,
+// "tightest" grid (most cells on axis, least cell size).
+// Square that, and you get the total number of cells.
 const hshg_cell_t cells_on_axis = 64;
-/* Side length of one cell in the first, "tightest"
-grid. Generally, you will want to make this be as
-close to the smallest entity's radius as possible. */
+
+// Side length of one cell in the first, "tightest"
+// grid. Generally, you will want to make this be as
+// close to the smallest entity's radius as possible.
 const uint32_t cell_size = 16;
 
-hshg_t* hshg = nhshg::hshg_create(allocator, cells_on_axis, cell_size, max_entities);
+nhshg::hshg_t* hshg = nhshg::hshg_create(allocator, cells_on_axis, cell_size, max_entities);
 
-class my_entity_event_handler_t : public hshg::entity_event_handler_t {
+class my_update_func_t : public nhshg::update_func_t
+{
 public:
-    virtual void update(entity_t const* e, index_t const* ref, s32 num_entities, entity_functions_t* f)
+    virtual void update(nhshg::index_t begin, nhshg::index_t end, nhshg::entity_t* entity_array, nhshg::index_t const* ref_array, nhshg::hshg_t* hshg)
     {
         // update entities
     }
-
-    virtual void const_update(entity_t const* e, nhshg::index_t const* ref, s32 num_entities, entity_functions_t* f)
-    {
-        // handle entities
-    }
-
-    virtual void collide(entity_t const* e1, nhshg::index_t e1_ref, entity_t const* e2, nhshg::index_t e2_ref) 
-    {
-        // collision detection
-    }
-
-    virtual void query(entity_t const* e, nhshg::index_t e1_ref)
-    {
-        // query
-    }
-
 };
 
 ```
@@ -122,14 +101,16 @@ Additionally, `collide` is called per every "suspect" pair of entities. They don
 
 Insertion:
 
-```c
-const hshg_pos_t x = 0.12;
-const hshg_pos_t y = 3.45;
-const hshg_pos_t r = 6.78;
-const hshg_entity_t ref = 0; /* Not needed for now */
-int err = hshg_insert(&hshg, x, y, r, ref);
-if(err) {
-  /* Out of memory */
+```c++
+const f32 x = 0.12;
+const f32 y = 3.45;
+const f32 z = 2.71;
+const f32 r = 6.78;
+const index_t ref = 0; /* Not needed for now */
+const bool inserted = hshg_insert(hshg, x, y, z, r, ref);
+if(!inserted)
+{
+    // No more available entities
 }
 ```
 
@@ -137,17 +118,17 @@ No identifier for the entity is returned from `hshg_insert()`, but one is requir
 
 That's what the `ref` variable mentioned above achieves - it lets you attach a piece of data (generally an index to a larger array containing lots of data that an entity needs) to the entities you insert. To begin with, you can create an array of data per entity you will want to use:
 
-```c
+```c++
 struct my_entity 
 {
-    hshg_pos_t vx;
-    hshg_pos_t vy;
-    int remove_me;
+    f32 vx;
+    f32 vy;
+    s32 remove_me;
 };
 
 #define ABC /* some number */
 
-struct my_entity my_entities[ABC];
+my_entity my_entities[ABC];
 ```
 
 Now, really, you can do a load of stuff with this to suit it to your needs, like an `hshg_insert()` wrapper that also populates the chosen `my_entities[]` spot, and a method for actually choosing a spot in the array. I'd like to keep it simple, so I will go for a rather dumb solution:
@@ -155,175 +136,202 @@ Now, really, you can do a load of stuff with this to suit it to your needs, like
 ```c++
 s32 my_entities_len = 0;
 
-int my_insert(nhshg::entity* ent, struct my_entity* my_ent) {
-  my_entities[my_entities_len] = *my_ent;
-  const int ret = hshg_insert(hshg, ent->x, ent->y, ent->r, my_entities_len);
-  ++my_entities_len;
-  return ret;
+int my_insert(nhshg::hshg_t* hshg, nhshg::entity* ent, my_entity* my_ent)
+{
+    my_entities[my_entities_len] = *my_ent;
+    const s32 ret = hshg_insert(hshg, ent->x, ent->y, ent->r, my_entities_len);
+    ++my_entities_len;
+    return ret;
 }
 ```
 
-Now, from any callback that involves `struct entity_t`, you will also be given the number kept in `ref`, that will then allow you to access that specific spot in the array `entities`. Then, you can implement the process of deleting an entity like so:
+Now, from any callback that involves `entity_t`, you will also be given the number kept in `ref`, that will then allow you to access that specific spot in the array `entities`. Then, you can implement the process of deleting an entity like so:
 
 
-```c
-void my_entity_handler_t::update(index_t begin, index_t end, entity_t* entities, index_t const* ref, entity_functions_t* f) {
-    for(index_t i = start; i < end; ++i)
+```c++
+void my_entity_handler_t::update(nhshg::index_t begin, nhshg::index_t end, nhshg::entity_t* entities_array, nhshg::index_t const* ref_array, nhshg::hshg_t* hshg) 
+{
+    for(nhshg::index_t i = start; i < end; ++i)
     {
         my_entity_t* my_ent = my_entities + ref[i];
         if(my_ent->remove_me)
         {
-           f->remove(i);
+           nhshg::hshg_remove(hshg, i);
         }
-        e[i].x += my_ent->vx;
-        e[i].y += my_ent->vy;
-        f->move(i);
+        entities_array[i].x += my_ent->vx;
+        entities_array[i].y += my_ent->vy;
+        nhshg::hshg_move(hshg, i);
 
         // Note: If you change the radius, you must call resize
-        // f->resize(i);
+        // nhshg::hshg_resize(hshg, i);
     }
-
 }
 
 ```
 
-The update callback above can remove entities, and seems to update their position, however the underlying code doesn't actually know the position was updated after you return from the callback. To fix that, call `move(entity index)`, generally after you have finished updating the entity (see above).
+The update callback above can remove entities, and seems to update their position, however the underlying code doesn't actually know the position was updated after you return from the callback. To fix that, call `hshg_move(entity index)`, generally after you have finished updating the entity (see above).
 
-You don't need to call `move(entity index)` every single time you change `x` or `y` - you may as well call it once at the end of the update of an entity.
+You don't need to call `hshg_move(entity index)` every single time you change `x` or `y` - you may as well call it once at the end of the update of an entity.
 
-If you are updating the entity's radius too (`entity->r`), you must also call `resize(entity index)`. It works pretty much like `move(entity index)`. If you need to call both, it does not matter in what order you do so.
+If you are updating the entity's radius too (`entity->r`), you must also call `hshg_resize(entity index)`. It works pretty much like `hshg_move(entity index)`. If you need to call both, it does not matter in what order you do so.
 
 If you move or update an entity's radius without calling the respective functions at the end of the update callback, collision will not be accurate, query will not return the right entities, stuff will break, and the world is going to end.
 
 If you call `hshg_insert()` from `update`, the newly inserted entity **will not** be updated during the same `update()` function call. 
 
-Note that `remove(entity index)` may **only** be called from `update()`. Same goes for `move()` and `resize()`. These functions do accept an entity index and it is validated by the HSHG to be within the begin/end range.
+Note that `hshg_remove(entity index)` may **only** be called from `hshg_update()`. Same goes for `hshg_move()` and `hshg_resize()`. These functions do accept an entity index and it is validated by the HSHG to be within the begin/end range.
 
 `hshg_update(hshg)` calls `update` by passing the active range of entities for the user to process. You may not call this function recursively from its callback, nor can you call `hshg_optimize()` and `hshg_collide()`. You are allowed to call `hshg_query()`, however note that you must do so **after** you update positions of entities, which generally will require you to do two `hshg_update()`'s:
 
-```c
-void update(struct hshg* hshg, struct hshg_entity* entity) {
-  struct my_entity* my_ent = entities + entity->ref;
+```c++
+class my_update_fn : public hshg::update_func_t
+{
+    void update(nhshg::index_t begin, nhshg::index_t end, nhshg::entity_t* entity_array, nhshg::index_t const* ref_array, nhshg::hshg_t* hshg)
+    {
+        for(index_t i = begin; i < end; ++i) {
+            my_entity_t* my_ent = my_entities + ref_array[i];
+            if(my_ent->remove_me) {
+                nhshg::hshg_remove(hshg, i);
+            }
+            entity_array[i].x += my_ent->vx;
+            entity_array[i].y += my_ent->vy;
+            nhshg::hshg_move(hshg, i);
+        }
+    }
+};
 
-  if(my_ent->remove_me) {
-    hshg_remove(hshg);
-    return;
-  }
+class my_query_func_t : public hshg::query_func_t
+{
+    const nhshg::entity_t* queried_entities[ABC];
+    s32 query_len;
 
-  entity->x += my_ent->vx;
-  entity->y += my_ent->vy;
+    void query(nhshg::entity_t const* e, nhshg::index_t e1_ref)
+    {
+      queried_entities[query_len++] = entity;
+    }
+};
 
-  hshg_move(hshg);
-}
+class my_update_with_query_fn : public hshg::update_func_t
+{
+    void update(nhshg::index_t begin, nhshg::index_t end, nhshg::entity_t* entity_array, nhshg::index_t const* ref_array, nhshg::hshg_t* hshg)
+    {
+        my_query_func_t query_fn;
+        for (index_t i = begin; i < end; ++i)
+        {
+            my_entity_t* my_ent = my_entities + ref_array[i];
 
-const struct hshg_entity* queried_entities[ABC];
-hshg_entity_t query_len = 0;
+            query_fn.query_len = 0;
+            nhshg::hshg_query(hshg, minx, miny, maxx, maxy, &query_fn);
 
-void query(const struct hshg* hshg, const struct hshg_entity* entity) {
-  queried_entities[query_len++] = entity;
-}
+            // do something with the query data stored in query_fn.queried_entities[] 
+        }
+    }
+};
 
-void update_with_query(struct hshg* hshg, struct hshg_entity* entity) {
-  struct my_entity* my_ent = entities + entity->ref;
+void tick(nhshg::hshg_t* hshg)
+{
+    my_update_fn update_fn;
+    nhshg::hshg_update(hshg, update_fn);
 
-  query_len = 0;
-  hshg_query(hshg, minx, miny, maxx, maxy);
+    my_update_with_query_fn update_with_query;
+    nhshg::hshg_update(hshg, &update_with_query);
+    
+    // maybe also collide, etc
 
-  /* do something with the query data stored in queried_entities[] */
-}
-
-struct hshg hshg = {0};
-hshg.query = query;
-assert(!hshg_init(&hshg, 1, 1));
-
-void tick(void) {
-  hshg.update = update;
-  hshg_update(&hshg);
-  hshg.update = update_with_query;
-  hshg_update(&hshg);
-  /* maybe also collide, etc */
 }
 ```
 
-This sequentiality is required for most projects that want accurate *things*. If you mix updating an entity with viewing an entity's state, all weird sorts of things can happen. Mostly it will be harmless, perhaps minimal visual bugs on the edges of the screen due to incorrect data fetched by `hshg_query()`, but if you don't want that minimal incorrectness (and you probably don't), then separate the concept of modifying `struct hshg_entity` from viewing it. For instance, **NEVER** update an entity in `hshg_collide()`'s callback. Because the next entity the function goes to will see something else than what the previous entity saw.
+This sequentiality is required for most projects that want accurate *things*. If you mix updating an entity with viewing an entity's state, all weird sorts of things can happen. Mostly it will be harmless, perhaps minimal visual bugs on the edges of the screen due to incorrect data fetched by `hshg_query()`, but if you don't want that minimal incorrectness (and you probably don't), then separate the concept of modifying `nhshg::entity_t` from viewing it. For instance, **NEVER** update an entity in `hshg_collide()`'s callback. Because the next entity the function goes to will see something else than what the previous entity saw.
 
-`hshg_optimize(&hshg)` reallocates all entities and changes the order they are in so that they appear in the most cache friendly way possible. This process insanely speeds up basically all other functions. Moreover, for the duration of the function, the memory usage will nearly double, so if you can't have that, don't use the function.
+`hshg_optimize(hshg)` reallocates all entities and changes the order they are in so that they appear in the most cache friendly way possible. This process insanely speeds up basically all other functions. Moreover, for the duration of the function, the memory usage will nearly double, so if you can't have that, don't use the function.
 
-```c
-int err = hshg_optimize(&hshg);
-if(err) {
-  /* Out of memory */
-}
+```c++
+hshg_optimize(hshg);
 ```
 
 While the function helps other functions, it by itself takes a lot of time too. If you want stable performance, your best bet is to call it every single tick, but if you are fine with spikes every now and then, you can call the function every few tens of ticks. This will generally decrease the average time for a tick, but then again, rising from that average will be the call every few tens of ticks, displayed as a big red spike.
 
-`hshg_collide(&hshg)` goes through all entities and detects broad collision between them. It is your responsibility to detect the collision with more detail in the `hshg.collide` callback, if necessary. A sample callback for simple circle collision might look like so:
+`hshg_collide(hshg)` goes through all entities and detects broad collision between them. It is your responsibility to detect the collision with more detail in the `hshg.collide` callback, if necessary. A sample callback for simple circle collision might look like so:
 
-```c
-void collide(const struct hshg* hshg, const struct hshg_entity* a, const struct hshg_entity* b) {
-  (void) hshg;
-  const float xd = a->x - b->x;
-  const float yd = a->y - b->y;
-  const float d = xd * xd + yd * yd;
-  if(d <= (a->r + b->r) * (a->r + b->r)) { /* if distance less than sum of radiuses */
-    const float angle = atan2f(yd, xd);
-    const float c = cosf(angle);
-    const float s = sinf(angle);
-    objs[a->ref].vx += c;
-    objs[a->ref].vy += s;
-    objs[b->ref].vx -= c;
-    objs[b->ref].vy -= s;
-  }
-}
+```c++
+class my_collide_fn : public nhshg::collide_func_t
+{
+    my_entity_t* my_entities;
+    void collide(nhshg::entity_t const* e1, nhshg::index_t e1_ref, entity_t const* e2, nhshg::index_t e2_ref) 
+    {
+        const f32 xd = e1->x - e2->x;
+        const f32 yd = e1->y - e2->y;
+        const f32 d = xd * xd + yd * yd;
+        if (d <= (e1->r + e2->r) * (e1->r + e2->r))
+        {
+            const f32 angle = atan2f(yd, xd);
+            const f32 c = cosf(angle);
+            const f32 s = sinf(angle);
 
-hshg.collide = collide;
+            my_entity* a = my_entities + e1_ref;
+            a->vx += c;
+            a->vy += s;
+
+            my_entity* b = my_entities + e2_ref;
+            b->vx -= c;
+            b->vy -= s;
+        }
+    }
+};
+
 ```
 
 From this callback, you may not call `hshg_update()` or `hshg_optimize()`.
 
-`hshg_query(&hshg, min_x, min_y, max_x, max_y)` calls `hshg.query` on every entity that belongs to the rectangular area from `(min_x, min_y)` to `(max_x, max_y)`. It is important that the second and third arguments are smaller or equal to fourth and fifth.
+`hshg_query(hshg, min_x, min_y, max_x, max_y, query_fn)` calls `query_fn->query(...)` on every entity that belongs to the rectangular area from `(min_x, min_y)` to `(max_x, max_y)`. It is important that the second and third arguments are smaller or equal to fourth and fifth.
 
-```c
+```c++
 void query(const struct hshg* hshg, const struct hshg_entity* a) {
-  draw_a_circle(a->x, a->y, a->r);
 }
 
-hshg.query = query;
-const hshg_cell_t cells = 128;
-const uint32_t cell_size = 128;
-assert(!hshg_init(&hshg, cells, cell_size));
+class my_query_func_t : public hshg::query_func_t
+{
+    void query(nhshg::entity_t const* e, nhshg::index_t e1_ref)
+    {
+        draw_a_sphere(e->x, e->y, e->z, e->r);
+    }
+};
 
-/* This is not equal to querying every entity, because
-entities don't need to lay within the area of the HSHG
-to be properly mapped to cells - they can exist millions
-of units away. If you want to limit them to this range,
-impose limits on their position in the update callback. */
-const uint32_t total_size = cells * cell_size;
-hshg_query(&hshg, 0, 0, total_size, total_size);
+
+const nhshg::cell_t cells = 128;
+const u32 cell_size = 128;
+nhshg::hshg_t* hshg = nhshg_create(hshg, cells, cell_size);
+
+// This is not equal to querying every entity, because
+// entities don't need to lay within the area of the HSHG
+// to be properly mapped to cells - they can exist millions
+// of units away. If you want to limit them to this range,
+// impose limits on their position in the update callback.
+const u32 total_size = cells * cell_size;
+my_query_func_t query_fn;
+nhshg::hshg_query(hshg, 0, 0, total_size, total_size, &query_fn);
 ```
 
-You may not call any of `hshg_update()`, `hshg_optimize()`, or `hshg_collide()` from this callback. You may recursively call `hshg_query()` from its callback.
+You may not call any of `hshg_update()`, `hshg_optimize()`, or `hshg_collide()` from this callback. 
+You may recursively call `hshg_query()` from its callback.
 
 Summing up all of the above, a normal update tick would look like so:
 
-```c
-hshg_update(&hshg);
-assert(!hshg_optimize(&hshg)); /* no "no mem" */
-hshg_collide(&hshg);
+```c++
+hshg_update(hshg, &my_update_fn);
+hshg_optimize(hshg);
+hshg_collide(hshg, &my_collide_fn);
 ```
 
 Or:
 
-```c
-hshg_collide(&hshg);
-hshg_update(&hshg);
-assert(!hshg_optimize(&hshg));
+```c++
+hshg_collide(hshg, &my_collide_fn);
+hshg_update(hshg, &my_update_fn);
+hshg_optimize(hshg);
 ```
 
 Which is essentially the same as the first one, except not really.
-
-For a complete example, see `c/bench.c` or any of the test suites.
 
 ## Optimizations
 
@@ -334,56 +342,7 @@ A few methods were already mentioned above:
 
 However, there's still room for improvement.
 
-- `hshg_optimize()` causes the internal array of entities of a HSHG to be reordered in a cache-friendly way. That's only part of what entities consist of though - above, `struct my_entity` was an additional part of every entity, with the difference that it existed in a different array. Over time, the order of entities internally will become more and more different from the non-changing array `struct my_entity entities[]`, and so in the update callback, you would be accessing a totally different index internally than in `entities`. That will create cache issues and might slow down the callback even up to 2 times. You can write a function that mitigates this, however at the cost of an additional memory allocation, just like `hshg_optimize()`:
-
-  ```c
-  struct my_entity* entities = NULL;
-  struct my_entity* entities_new = NULL;
-  hshg_entity_t new_idx = 0;
-
-  void update_optimize_entities(struct hshg* hshg, struct hshg_entity* entity) {
-    entities_new[new_idx] = entities[a->ref];
-    entity->ref = new_idx;
-    ++new_idx;
-  }
-
-  void optimize_entities(struct hshg* hshg) {
-    entities_new = calloc(ABC, sizeof(*entities));
-    assert(entities_new);
-    new_idx = 0;
-    hshg_update_t old = hshg->update;
-    hshg->update = update_optimize_entities;
-    hshg_update(hshg);
-    free(entities);
-    entities = entities_new;
-    hshg->update = old;
-  }
-
-  /* .. and then, in tick .. */
-  if(tick_counter % 64 == 0) {
-    /* order matters */
-    assert(!hshg_optimize(&hshg));
-    optimize_entities(&hshg);
-  }
-  ```
-
+- `hshg_optimize()` causes the internal array of entities of a HSHG to be reordered in a cache-friendly way. That's only part of what entities consist of though - above, `struct my_entity` was an additional part of every entity, with the difference that it existed in a different array. Over time, the order of entities internally will become more and more different from the non-changing array `m_entities[]`, and so in the update callback, you would be accessing a totally different index internally than in `entities`. That will create cache issues and might slow down the callback even up to 2 times. You can write a function that mitigates this, however at the cost of an additional memory allocation, just like `hshg_optimize()`.
+  
 - You might not need to make the HSHG as big as the area you are working with - entities outside of the HSHG's area coverage are still inserted into it, and not on the edge cells like in most QuadTree implementations - they are actually well mapped and spaced out, so basically no performance is lost. Especially in setups where entities are very scattered and not clumped, your performance *might* improve if you decrease the number of cells. On the contrary, increasing the structure's size above of what you need probably won't bring any benefits.
 
-- If your memory is constrained beyond belief, and you certainly won't use a lot of cells and entities, or if you actually have higher requirements than what the defaults are, you might want to opt in changing some constants in the `c/hshg.h` file and recompiling the library (or, if you are simply including the files in your own project, you can redefine these macros before `#include`'ing `hshg.h`). Namely:
-
-  - `hshg_entity_t` - type that fits the number of entities,
-  - `hshg_cell_t` - type that fits the number of cells **on one axis**,
-  - `hshg_cell_sq_t` - type that fits the total number of cells (might be the same as `hshg_cell_t`),
-  - `hshg_pos_t` - type that `x`, `y`, and `r` are using (`float` by default).
-
-  For the first 3, there's no need to make them signed. As for `hshg_pos_t`, only floating-point types are allowed.
-
-  Say you won't use more than 10,000 entities, and you want to have 64x64 cells, 32x32 cell size each. In that case, you may set these constants to the following:
-
-  ```c
-  #define hshg_entity_t  uint16_t
-  #define hshg_cell_t    uint8_t
-  #define hshg_cell_sq_t uint16_t
-  ```
-
-  That will save up a few bytes, not only in `struct hshg_entity`, but also in `struct hshg`, and note that each cell is of type `hshg_entity_t`, so the smaller that is, the less memory cells will use. With the above settings, your simulation would use roughly 250KB (not counting in memory that might be allocated by `hshg_optimize()` and any custom data you might want to keep alongside entities in a separate array).

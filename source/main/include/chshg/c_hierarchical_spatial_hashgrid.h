@@ -14,6 +14,7 @@ namespace ncore
     namespace nhshg
     {
         typedef u32 index_t;
+        typedef u32 ref_t;
         typedef u32 cell_t;
 
         const index_t c_invalid_index = 0xFFFFFFFF;
@@ -38,35 +39,36 @@ namespace ncore
 
         class hshg_t;
 
-        void hshg_remove(hshg_t* hshg, index_t e);
-        void hshg_move(hshg_t* hshg, index_t e);
-        void hshg_resize(hshg_t* hshg, index_t e);
-
         class update_func_t
         {
         public:
-            virtual void update(index_t begin, index_t end, entity_t* e, index_t const* ref, hshg_t* hshg) = 0;
+            virtual void update(nhshg::index_t begin, nhshg::index_t end, nhshg::entity_t* entity_array, nhshg::index_t const* ref_array, nhshg::hshg_t* hshg) = 0;
         };
+
         class multi_threaded_update_func_t
         {
         public:
-            virtual void update(index_t begin, index_t end, entity_t const* e, nhshg::index_t const* ref, hshg_t* hshg) = 0;
+            virtual void update(nhshg::index_t begin, nhshg::index_t end, nhshg::entity_t const* entity_array, nhshg::index_t const* ref_array, nhshg::hshg_t* hshg) = 0;
         };
 
         class collide_func_t
         {
         public:
-            virtual void collide(entity_t const* e1, nhshg::index_t e1_ref, entity_t const* e2, nhshg::index_t e2_ref) = 0;
+            virtual void collide(nhshg::entity_t const* e1, nhshg::index_t e1_ref, entity_t const* e2, nhshg::index_t e2_ref) = 0;
         };
 
         class query_func_t
         {
         public:
-            virtual void query(entity_t const* e, nhshg::index_t e1_ref) = 0;
+            virtual void query(nhshg::entity_t const* e, nhshg::index_t e1_ref) = 0;
         };
 
         hshg_t* hshg_create(alloc_t* allocator, const cell_t side, const u32 size, const u32 max_entities);
         void    hshg_free(hshg_t* const hshg);
+
+        void hshg_remove(hshg_t* hshg, index_t entity_index);
+        void hshg_move(hshg_t* hshg, index_t entity_index);
+        void hshg_resize(hshg_t* hshg, index_t entity_index);
 
         bool hshg_insert(hshg_t* const hshg, const f32 x, const f32 y, const f32 z, const f32 r, const index_t ref);
         void hshg_update(hshg_t* const hshg, update_func_t* const func);

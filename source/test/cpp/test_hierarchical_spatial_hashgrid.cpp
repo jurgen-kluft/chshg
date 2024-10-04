@@ -35,6 +35,7 @@ public:
 
     void reset()
     {
+        m_obj_count = 0;
         for (int i = 0; i < EMAX_OBJECTS; ++i)
         {
             m_objects[i].count = 0;
@@ -81,12 +82,12 @@ public:
 };
 
 // Object that is connected to the spatial hashgrid entity
-class my_update_handler_t : public nhshg::update_func_t
+class my_update_handler_t final : public nhshg::update_func_t
 {
 public:
     objects_t* m_objects;
 
-    void update(nhshg::index_t begin, nhshg::index_t end, nhshg::entity_t* e, nhshg::index_t const* ref, nhshg::hshg_t* hshg) override
+    void update(nhshg::index_t begin, nhshg::index_t end, nhshg::entity_t* e, nhshg::index_t const* ref, nhshg::hshg_t* hshg) override final
     {
         for (nhshg::index_t i = begin; i < end; ++i)
         {
@@ -104,12 +105,12 @@ public:
     s32 update_count = 0;
 };
 
-class my_collision_handler_t : public nhshg::collide_func_t
+class my_collision_handler_t final : public nhshg::collide_func_t
 {
 public:
     objects_t* m_objects;
 
-    void collide(const nhshg::entity_t* e1, nhshg::index_t e1_ref, const nhshg::entity_t* e2, nhshg::index_t e2_ref) override
+    void collide(const nhshg::entity_t* e1, nhshg::index_t e1_ref, const nhshg::entity_t* e2, nhshg::index_t e2_ref) override final
     {
         const float dx = e1->x - e2->x;
         const float dy = e1->y - e2->y;
@@ -187,7 +188,6 @@ UNITTEST_SUITE_BEGIN(test_hierarchical_spatial_hashgrid)
         static s32 do_check_collisions(nhshg::hshg_t * hshg)
         {
             s_collision_handler.reset();
-            s_objects.reset();
 
             nhshg::hshg_collide(hshg, &s_collision_handler);
             return s_collision_handler.collide_count;
@@ -196,7 +196,6 @@ UNITTEST_SUITE_BEGIN(test_hierarchical_spatial_hashgrid)
         static void do_remove_update(nhshg::hshg_t * hshg)
         {
             s_update_handler.reset();
-            s_objects.reset();
 
             for (s32 i = 0; i < s_objects.m_obj_count; ++i)
             {
