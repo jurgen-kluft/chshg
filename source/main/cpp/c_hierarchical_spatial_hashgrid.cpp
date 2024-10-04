@@ -16,23 +16,23 @@ namespace ncore
 
             DCORE_CLASS_PLACEMENT_NEW_DELETE
 
-            index_t* const  cells;
-            cell_t const    cells_side;
-            cell_sq_t const cells_sq;
-            cell_t const    cells_mask;   // for masking index_t to wrap around grid
-            u8 const        cells2d_log;  // number of bits to shift y
-            u8 const        cells3d_log;  // number of bits to shift z
-            u8              shift;
-            f32 const       inverse_cell_size;
-            index_t         entities_len;
+            index_t* const  m_cells;
+            cell_t const    m_cells_side;
+            cell_sq_t const m_cells_sq;
+            cell_t const    m_cells_mask;   // for masking index_t to wrap around grid
+            u8 const        m_cells2d_log;  // number of bits to shift y
+            u8 const        m_cells3d_log;  // number of bits to shift z
+            u8              m_shift;
+            f32 const       m_inverse_cell_size;
+            index_t         m_entities_len;
         };
 
         // A cell will hold a doubly linked list of entities, this is a part of an entity
         // used as a node in the doubly linked list.
         struct entity_node_t
         {
-            index_t next;
-            index_t prev;
+            index_t m_next;
+            index_t m_prev;
         };
 
         class hshg_t
@@ -49,17 +49,17 @@ namespace ncore
             // \param side; the number of cells on the smallest grid's edge (must be a power of two!)
             // \param size; smallest cell size in world units, e.g. 8 = 8 meters (must be a power of two!)
             //
-            inline u8 calling() const { return bupdating | bcolliding | bquerying; }
+            inline u8 calling() const { return m_bupdating | m_bcolliding | m_bquerying; }
 
-            inline void set_updating(bool value) { bupdating = value; }
-            inline void set_colliding(bool value) { bcolliding = value; }
-            inline void set_querying(bool value) { bquerying = value; }
-            inline void set_removed(bool value) { bremoved = value; }
+            inline void set_updating(bool value) { m_bupdating = value; }
+            inline void set_colliding(bool value) { m_bcolliding = value; }
+            inline void set_querying(bool value) { m_bquerying = value; }
+            inline void set_removed(bool value) { m_bremoved = value; }
 
-            inline bool is_updating() const { return bupdating; }
-            inline bool is_colliding() const { return bcolliding; }
-            inline bool is_querying() const { return bquerying; }
-            inline bool is_removed() const { return bremoved; }
+            inline bool is_updating() const { return m_bupdating; }
+            inline bool is_colliding() const { return m_bcolliding; }
+            inline bool is_querying() const { return m_bquerying; }
+            inline bool is_removed() const { return m_bremoved; }
 
             void update_cache();
 
@@ -104,10 +104,10 @@ namespace ncore
             u8 const m_cell_log;
             u8 const m_grids_len;
 
-            u8 bupdating : 1;
-            u8 bcolliding : 1;
-            u8 bquerying : 1;
-            u8 bremoved : 1;
+            u8 m_bupdating : 1;
+            u8 m_bcolliding : 1;
+            u8 m_bquerying : 1;
+            u8 m_bremoved : 1;
 
             u32 m_old_cache;
             u32 m_new_cache;
@@ -152,18 +152,18 @@ namespace ncore
 
         static cell_t grid_get_cell_1d(const grid_t* const grid, const f32 x)
         {
-            const cell_t cell = math::abs(x) * grid->inverse_cell_size;
-            if (cell & grid->cells_side)
+            const cell_t cell = math::abs(x) * grid->m_inverse_cell_size;
+            if (cell & grid->m_cells_side)
             {
-                return grid->cells_mask - (cell & grid->cells_mask);
+                return grid->m_cells_mask - (cell & grid->m_cells_mask);
             }
-            return cell & grid->cells_mask;
+            return cell & grid->m_cells_mask;
         }
 
-        static cell_sq_t grid_get_idx(const grid_t* const grid, const cell_sq_t x, const cell_sq_t y, const cell_sq_t z) { return x | (y << grid->cells2d_log) | (z << grid->cells3d_log); }
-        static cell_t    idx_get_x(const grid_t* const grid, const cell_sq_t cell) { return cell & grid->cells_mask; }
-        static cell_t    idx_get_y(const grid_t* const grid, const cell_sq_t cell) { return (cell >> grid->cells2d_log) & grid->cells_mask; }
-        static cell_t    idx_get_z(const grid_t* const grid, const cell_sq_t cell) { return cell >> grid->cells3d_log; }
+        static cell_sq_t grid_get_idx(const grid_t* const grid, const cell_sq_t x, const cell_sq_t y, const cell_sq_t z) { return x | (y << grid->m_cells2d_log) | (z << grid->m_cells3d_log); }
+        static cell_t    idx_get_x(const grid_t* const grid, const cell_sq_t cell) { return cell & grid->m_cells_mask; }
+        static cell_t    idx_get_y(const grid_t* const grid, const cell_sq_t cell) { return (cell >> grid->m_cells2d_log) & grid->m_cells_mask; }
+        static cell_t    idx_get_z(const grid_t* const grid, const cell_sq_t cell) { return cell >> grid->m_cells3d_log; }
 
         static cell_sq_t grid_get_cell(const grid_t* const grid, const f32 x, const f32 y, const f32 z)
         {
@@ -175,28 +175,28 @@ namespace ncore
         }
 
         grid_t::grid_t()
-            : cells(nullptr)
-            , cells_side(0)
-            , cells_sq(0)
-            , cells_mask(0)
-            , cells2d_log(0)
-            , cells3d_log(0)
-            , shift(0)
-            , inverse_cell_size(0)
-            , entities_len(0)
+            : m_cells(nullptr)
+            , m_cells_side(0)
+            , m_cells_sq(0)
+            , m_cells_mask(0)
+            , m_cells2d_log(0)
+            , m_cells3d_log(0)
+            , m_shift(0)
+            , m_inverse_cell_size(0)
+            , m_entities_len(0)
         {
         }
 
         grid_t::grid_t(index_t* const _cells_array, const cell_t _cells_side)
-            : cells(_cells_array)
-            , cells_side(_cells_side)
-            , cells_sq((cell_sq_t)_cells_side * _cells_side)
-            , cells_mask(_cells_side - 1)
-            , cells2d_log(math::countTrailingZeros(_cells_side) << 0)
-            , cells3d_log(math::countTrailingZeros(_cells_side) << 1)
-            , shift(0)
-            , inverse_cell_size((f32)1.0 / _cells_side)
-            , entities_len(0)
+            : m_cells(_cells_array)
+            , m_cells_side(_cells_side)
+            , m_cells_sq((cell_sq_t)_cells_side * _cells_side)
+            , m_cells_mask(_cells_side - 1)
+            , m_cells2d_log(math::countTrailingZeros(_cells_side) << 0)
+            , m_cells3d_log(math::countTrailingZeros(_cells_side) << 1)
+            , m_shift(0)
+            , m_inverse_cell_size((f32)1.0 / _cells_side)
+            , m_entities_len(0)
         {
         }
 
@@ -208,10 +208,10 @@ namespace ncore
             , m_cells(nullptr)
             , m_cell_log(0)
             , m_grids_len(0)
-            , bupdating(0)
-            , bcolliding(0)
-            , bquerying(0)
-            , bremoved(0)
+            , m_bupdating(0)
+            , m_bcolliding(0)
+            , m_bquerying(0)
+            , m_bremoved(0)
             , m_old_cache(0)
             , m_new_cache(0)
             , m_grid_size(0)
@@ -232,10 +232,10 @@ namespace ncore
             , m_cells(_cells)
             , m_cell_log(31 - math::countTrailingZeros(_size))
             , m_grids_len(_grids_len)
-            , bupdating(0)
-            , bcolliding(0)
-            , bquerying(0)
-            , bremoved(0)
+            , m_bupdating(0)
+            , m_bcolliding(0)
+            , m_bquerying(0)
+            , m_bremoved(0)
             , m_old_cache(0)
             , m_new_cache(0)
             , m_grid_size(_grid_size)
@@ -345,23 +345,23 @@ namespace ncore
             grid_t* const grid = m_grids + m_entities_grid[idx];
 
             m_entities_cell[idx] = grid_get_cell(grid, entity->x, entity->y, entity->z);
-            index_t* const cell  = grid->cells + m_entities_cell[idx];
+            index_t* const cell  = grid->m_cells + m_entities_cell[idx];
 
-            entity_node->next = *cell;
-            if (entity_node->next != c_invalid_index)
+            entity_node->m_next = *cell;
+            if (entity_node->m_next != c_invalid_index)
             {
-                m_entities_node[entity_node->next].prev = idx;
+                m_entities_node[entity_node->m_next].m_prev = idx;
             }
 
-            entity_node->prev = c_invalid_index;
-            *cell             = idx;
+            entity_node->m_prev = c_invalid_index;
+            *cell               = idx;
 
-            if (grid->entities_len == 0)
+            if (grid->m_entities_len == 0)
             {
                 m_new_cache |= ((u32)1 << m_entities_grid[idx]);
             }
 
-            ++grid->entities_len;
+            ++grid->m_entities_len;
         }
 
         bool hshg_insert(hshg_t* const hshg, const f32 x, const f32 y, const f32 z, const f32 r, const index_t ref)
@@ -373,8 +373,8 @@ namespace ncore
                 return false;
 
             entity_node_t* const ent2 = hshg->m_entities_node + idx;
-            ent2->next                = c_invalid_index;
-            ent2->prev                = c_invalid_index;
+            ent2->m_next              = c_invalid_index;
+            ent2->m_prev              = c_invalid_index;
 
             entity_t* const ent = hshg->m_entities + idx;
             ent->x              = x;
@@ -400,22 +400,22 @@ namespace ncore
 
             grid_t* const grid = m_grids + entity_grid;
 
-            if (entity_node->next != c_invalid_index)
+            if (entity_node->m_next != c_invalid_index)
             {
-                m_entities_node[entity_node->next].prev = entity_node->prev;
+                m_entities_node[entity_node->m_next].m_prev = entity_node->m_prev;
             }
-            if (entity_node->prev != c_invalid_index)
+            if (entity_node->m_prev != c_invalid_index)
             {
-                m_entities_node[entity_node->prev].next = entity_node->next;
+                m_entities_node[entity_node->m_prev].m_next = entity_node->m_next;
             }
             else
             {
                 // we are at the head of the list, so update the grid cell
-                grid->cells[m_entities_cell[idx]] = entity_node->next;
+                grid->m_cells[m_entities_cell[idx]] = entity_node->m_next;
             }
 
-            --grid->entities_len;
-            if (grid->entities_len == 0)
+            --grid->m_entities_len;
+            if (grid->m_entities_len == 0)
             {
                 // There are no more entities in the grid, so we need to update the cache
                 m_new_cache ^= (u32)1 << entity_grid;
@@ -474,12 +474,12 @@ namespace ncore
             }
 
             // remove the used entity from the doubly linked list and insert the free entity
-            hshg->m_entities_node[used_entity2->prev].next = _free_entity;
+            hshg->m_entities_node[used_entity2->m_prev].m_next = _free_entity;
 
             entity_t* const      free_entity  = hshg->m_entities + _free_entity;
             entity_node_t* const free_entity2 = hshg->m_entities_node + _free_entity;
-            free_entity2->prev                = used_entity2->prev;
-            free_entity2->next                = used_entity2->next;
+            free_entity2->m_prev              = used_entity2->m_prev;
+            free_entity2->m_next              = used_entity2->m_next;
             free_entity->x                    = used_entity->x;
             free_entity->y                    = used_entity->y;
             free_entity->z                    = used_entity->z;
@@ -550,7 +550,7 @@ namespace ncore
 
             for (old_grid = this->m_grids; old_grid != grid_max; ++old_grid)
             {
-                old_grid->shift = 0;
+                old_grid->m_shift = 0;
             }
 
             old_grid = this->m_grids;
@@ -559,7 +559,7 @@ namespace ncore
             {
                 if (old_grid == grid_max)
                     return;
-                if (old_grid->entities_len != 0)
+                if (old_grid->m_entities_len != 0)
                     break;
 
                 ++old_grid;
@@ -571,15 +571,15 @@ namespace ncore
 
             for (new_grid = old_grid + 1; new_grid != grid_max; ++new_grid)
             {
-                if (new_grid->entities_len == 0)
+                if (new_grid->m_entities_len == 0)
                 {
                     ++shift;
                     continue;
                 }
 
-                old_grid->shift = shift;
-                old_grid        = new_grid;
-                shift           = 1;
+                old_grid->m_shift = shift;
+                old_grid          = new_grid;
+                shift             = 1;
             }
         }
 
@@ -589,7 +589,7 @@ namespace ncore
             while (n != c_invalid_index)
             {
                 handler->collide(entity, ref, &hshg->m_entities[n], hshg->m_entities_ref[n]);
-                n = hshg->m_entities_node[n].next;
+                n = hshg->m_entities_node[n].m_next;
             }
         }
 
@@ -615,7 +615,7 @@ namespace ncore
                 {
                     if (cell_y != 0)
                     {
-                        const index_t* const cell = grid->cells + (entity_cell - grid->cells_sq - grid->cells_side);
+                        const index_t* const cell = grid->m_cells + (entity_cell - grid->m_cells_sq - grid->m_cells_side);
 
                         if (cell_x != 0)
                         {
@@ -624,14 +624,14 @@ namespace ncore
 
                         loop_over(hshg, i, entity, *cell, handler);
 
-                        if (cell_x != grid->cells_mask)
+                        if (cell_x != grid->m_cells_mask)
                         {
                             loop_over(hshg, i, entity, *(cell + 1), handler);
                         }
                     }
 
                     {
-                        const index_t* const cell = grid->cells + (entity_cell - grid->cells_sq);
+                        const index_t* const cell = grid->m_cells + (entity_cell - grid->m_cells_sq);
 
                         if (cell_x != 0)
                         {
@@ -640,15 +640,15 @@ namespace ncore
 
                         loop_over(hshg, i, entity, *cell, handler);
 
-                        if (cell_x != grid->cells_mask)
+                        if (cell_x != grid->m_cells_mask)
                         {
                             loop_over(hshg, i, entity, *(cell + 1), handler);
                         }
                     }
 
-                    if (cell_y != grid->cells_mask)
+                    if (cell_y != grid->m_cells_mask)
                     {
-                        const index_t* const cell = grid->cells + (entity_cell - grid->cells_sq + grid->cells_side);
+                        const index_t* const cell = grid->m_cells + (entity_cell - grid->m_cells_sq + grid->m_cells_side);
 
                         if (cell_x != 0)
                         {
@@ -657,22 +657,22 @@ namespace ncore
 
                         loop_over(hshg, i, entity, *cell, handler);
 
-                        if (cell_x != grid->cells_mask)
+                        if (cell_x != grid->m_cells_mask)
                         {
                             loop_over(hshg, i, entity, *(cell + 1), handler);
                         }
                     }
                 }
-                loop_over(hshg, i, entity, entity_node->next, handler);
+                loop_over(hshg, i, entity, entity_node->m_next, handler);
 
-                if (cell_x != grid->cells_mask)
+                if (cell_x != grid->m_cells_mask)
                 {
-                    loop_over(hshg, i, entity, grid->cells[entity_cell + 1], handler);
+                    loop_over(hshg, i, entity, grid->m_cells[entity_cell + 1], handler);
                 }
 
-                if (cell_y != grid->cells_mask)
+                if (cell_y != grid->m_cells_mask)
                 {
-                    const index_t* const cell = grid->cells + (entity_cell + grid->cells_side);
+                    const index_t* const cell = grid->m_cells + (entity_cell + grid->m_cells_side);
 
                     if (cell_x != 0)
                     {
@@ -681,27 +681,27 @@ namespace ncore
 
                     loop_over(hshg, i, entity, *cell, handler);
 
-                    if (cell_x != grid->cells_mask)
+                    if (cell_x != grid->m_cells_mask)
                     {
                         loop_over(hshg, i, entity, *(cell + 1), handler);
                     }
                 }
 
-                while (grid->shift)
+                while (grid->m_shift)
                 {
-                    cell_x >>= grid->shift;
-                    cell_y >>= grid->shift;
-                    cell_z >>= grid->shift;
+                    cell_x >>= grid->m_shift;
+                    cell_y >>= grid->m_shift;
+                    cell_z >>= grid->m_shift;
 
-                    grid += grid->shift;
+                    grid += grid->m_shift;
 
                     const cell_t min_cell_x = cell_x != 0 ? cell_x - 1 : 0;
                     const cell_t min_cell_y = cell_y != 0 ? cell_y - 1 : 0;
                     const cell_t min_cell_z = cell_z != 0 ? cell_z - 1 : 0;
 
-                    const cell_t max_cell_x = cell_x != grid->cells_mask ? cell_x + 1 : cell_x;
-                    const cell_t max_cell_y = cell_y != grid->cells_mask ? cell_y + 1 : cell_y;
-                    const cell_t max_cell_z = cell_z != grid->cells_mask ? cell_z + 1 : cell_z;
+                    const cell_t max_cell_x = cell_x != grid->m_cells_mask ? cell_x + 1 : cell_x;
+                    const cell_t max_cell_y = cell_y != grid->m_cells_mask ? cell_y + 1 : cell_y;
+                    const cell_t max_cell_z = cell_z != grid->m_cells_mask ? cell_z + 1 : cell_z;
 
                     for (cell_t cur_z = min_cell_z; cur_z <= max_cell_z; ++cur_z)
                     {
@@ -710,7 +710,7 @@ namespace ncore
                             for (cell_t cur_x = min_cell_x; cur_x <= max_cell_x; ++cur_x)
                             {
                                 const cell_t cell = grid_get_idx(grid, cur_x, cur_y, cur_z);
-                                loop_over(hshg, i, entity, grid->cells[cell], handler);
+                                loop_over(hshg, i, entity, grid->m_cells[cell], handler);
                             }
                         }
                     }
@@ -764,19 +764,19 @@ namespace ncore
                 }
                 case 1:
                 {
-                    const cell_t cell = math::abs(x1) * grid->inverse_cell_size;
+                    const cell_t cell = math::abs(x1) * grid->m_inverse_cell_size;
 
                     end = grid_get_cell_1d(grid, x2);
 
-                    if (cell & grid->cells_side)
+                    if (cell & grid->m_cells_side)
                     {
                         start = 0;
-                        end   = math::max(grid->cells_mask - (cell & grid->cells_mask), end);
+                        end   = math::max(grid->m_cells_mask - (cell & grid->m_cells_mask), end);
                     }
                     else
                     {
-                        start = math::min(cell & grid->cells_mask, end);
-                        end   = grid->cells_mask;
+                        start = math::min(cell & grid->m_cells_mask, end);
+                        end   = grid->m_cells_mask;
                     }
 
                     break;
@@ -784,7 +784,7 @@ namespace ncore
                 default:
                 {
                     start = 0;
-                    end   = grid->cells_mask;
+                    end   = grid->m_cells_mask;
 
                     break;
                 }
@@ -815,7 +815,7 @@ namespace ncore
                     return;
                 }
 
-                if (grid->entities_len != 0)
+                if (grid->m_entities_len != 0)
                 {
                     break;
                 }
@@ -838,9 +838,9 @@ namespace ncore
                 const cell_t s_y = y.start != 0 ? y.start - 1 : 0;
                 const cell_t s_z = z.start != 0 ? z.start - 1 : 0;
 
-                const cell_t e_x = x.end != grid->cells_mask ? x.end + 1 : x.end;
-                const cell_t e_y = y.end != grid->cells_mask ? y.end + 1 : y.end;
-                const cell_t e_z = z.end != grid->cells_mask ? z.end + 1 : z.end;
+                const cell_t e_x = x.end != grid->m_cells_mask ? x.end + 1 : x.end;
+                const cell_t e_y = y.end != grid->m_cells_mask ? y.end + 1 : y.end;
+                const cell_t e_z = z.end != grid->m_cells_mask ? z.end + 1 : z.end;
 
                 for (cell_t z = s_z; z <= e_z; ++z)
                 {
@@ -850,7 +850,7 @@ namespace ncore
                         {
                             const cell_sq_t cell = grid_get_idx(grid, x, y, z);
 
-                            index_t entity_idx = grid->cells[cell];
+                            index_t entity_idx = grid->m_cells[cell];
                             while (entity_idx != c_invalid_index)
                             {
                                 const entity_t* const entity = hshg->m_entities + entity_idx;
@@ -860,23 +860,23 @@ namespace ncore
                                 }
 
                                 const entity_node_t* const entity_node = hshg->m_entities_node + entity_idx;
-                                entity_idx                             = entity_node->next;
+                                entity_idx                             = entity_node->m_next;
                             }
                         }
                     }
                 }
 
-                if (grid->shift)
+                if (grid->m_shift)
                 {
-                    x.start >>= grid->shift;
-                    y.start >>= grid->shift;
-                    z.start >>= grid->shift;
+                    x.start >>= grid->m_shift;
+                    y.start >>= grid->m_shift;
+                    z.start >>= grid->m_shift;
 
-                    x.end >>= grid->shift;
-                    y.end >>= grid->shift;
-                    z.end >>= grid->shift;
+                    x.end >>= grid->m_shift;
+                    y.end >>= grid->m_shift;
+                    z.end >>= grid->m_shift;
 
-                    grid += grid->shift;
+                    grid += grid->m_shift;
                 }
                 else
                 {
@@ -947,25 +947,25 @@ namespace ncore
 
                     entity_node_t const* const cur_entity_node = entities_node + new_entity_idx;
                     entity_node_t* const       new_entity_node = entities_node + new_entity_idx;
-                    if (cur_entity_node->prev != c_invalid_index)
+                    if (cur_entity_node->m_prev != c_invalid_index)
                     {
-                        new_entity_node->prev = new_entity_idx - 1;
+                        new_entity_node->m_prev = new_entity_idx - 1;
                     }
                     else
                     {
-                        new_entity_node->prev = c_invalid_index;
+                        new_entity_node->m_prev = c_invalid_index;
                     }
 
                     ++new_entity_idx;
 
-                    if (cur_entity_node->next == c_invalid_index)
+                    if (cur_entity_node->m_next == c_invalid_index)
                     {
-                        new_entity_node->next = c_invalid_index;
+                        new_entity_node->m_next = c_invalid_index;
                         break;
                     }
 
-                    entity_idx            = cur_entity_node->next;
-                    new_entity_node->next = new_entity_idx;
+                    entity_idx              = cur_entity_node->m_next;
+                    new_entity_node->m_next = new_entity_idx;
                 }
             }
 
