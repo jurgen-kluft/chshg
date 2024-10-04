@@ -70,13 +70,13 @@ namespace ncore
         void hshg_move(hshg_t* hshg, index_t entity_index);
         void hshg_resize(hshg_t* hshg, index_t entity_index);
 
-        bool hshg_insert(hshg_t* const hshg, const f32 x, const f32 y, const f32 z, const f32 r, const index_t ref);
-        void hshg_update(hshg_t* const hshg, update_func_t* const func);
-        void hshg_update_multithread(hshg_t* const hshg, const u8 threads, const u8 idx, multi_threaded_update_func_t* const func);
-        void hshg_collide(hshg_t* const hshg, collide_func_t* const func);
-        void hshg_query(hshg_t* const hshg, const f32 min_x, const f32 min_y, const f32 min_z, const f32 max_x, const f32 max_y, const f32 max_z, query_func_t* const func);
-        void hshg_query_multithread(hshg_t* const hshg, const f32 min_x, const f32 min_y, const f32 min_z, const f32 max_x, const f32 max_y, const f32 max_z, query_func_t* const handler);
-        void hshg_optimize(hshg_t* const hshg);
+        index_t hshg_insert(hshg_t* const hshg, const f32 x, const f32 y, const f32 z, const f32 r, const index_t ref);
+        void    hshg_update(hshg_t* const hshg, update_func_t* const func);
+        void    hshg_update_multithread(hshg_t* const hshg, const u8 threads, const u8 idx, multi_threaded_update_func_t* const func);
+        void    hshg_collide(hshg_t* const hshg, collide_func_t* const func);
+        void    hshg_query(hshg_t* const hshg, const f32 min_x, const f32 min_y, const f32 min_z, const f32 max_x, const f32 max_y, const f32 max_z, query_func_t* const func);
+        void    hshg_query_multithread(hshg_t* const hshg, const f32 min_x, const f32 min_y, const f32 min_z, const f32 max_x, const f32 max_y, const f32 max_z, query_func_t* const handler);
+        void    hshg_optimize(hshg_t* const hshg);
 
         //
         // Returns the maximum amount of memory a HSHG with given parameters will use,

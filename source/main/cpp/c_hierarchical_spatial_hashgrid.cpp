@@ -364,30 +364,30 @@ namespace ncore
             ++grid->m_entities_len;
         }
 
-        bool hshg_insert(hshg_t* const hshg, const f32 x, const f32 y, const f32 z, const f32 r, const index_t ref)
+        // insert_into_grid an entity into the grid and return the index of the entity
+        index_t hshg_insert(hshg_t* const hshg, const f32 x, const f32 y, const f32 z, const f32 r, const index_t ref)
         {
             ASSERT(!hshg->calling() && "insert() may not be called from any callback");
-
             const index_t idx = hshg->create_entity();
-            if (idx == c_invalid_index)
-                return false;
+            if (idx != c_invalid_index)
+            {
+                entity_node_t* const ent2 = hshg->m_entities_node + idx;
+                ent2->m_next              = c_invalid_index;
+                ent2->m_prev              = c_invalid_index;
 
-            entity_node_t* const ent2 = hshg->m_entities_node + idx;
-            ent2->m_next              = c_invalid_index;
-            ent2->m_prev              = c_invalid_index;
+                entity_t* const ent = hshg->m_entities + idx;
+                ent->x              = x;
+                ent->y              = y;
+                ent->z              = z;
+                ent->r              = r;
 
-            entity_t* const ent = hshg->m_entities + idx;
-            ent->x              = x;
-            ent->y              = y;
-            ent->z              = z;
-            ent->r              = r;
+                hshg->m_entities_cell[idx] = 0;
+                hshg->m_entities_grid[idx] = hshg->get_grid(r);
+                hshg->m_entities_ref[idx]  = ref;
 
-            hshg->m_entities_cell[idx] = 0;
-            hshg->m_entities_grid[idx] = hshg->get_grid(r);
-            hshg->m_entities_ref[idx]  = ref;
-
-            hshg->insert_into_grid(idx);
-            return true;
+                hshg->insert_into_grid(idx);
+            }
+            return idx;
         }
 
         // detach_from_grid an entity from the grid, to be re-inserted again in another cell
