@@ -254,16 +254,15 @@ namespace ncore
             ASSERTS(math::ispo2(_size), "_size must be a power of 2!");
 
             const cell_sq_t cells_len = compute_max_cells(_side);
-            index_t* const  cells     = (index_t*)allocator->allocate(sizeof(index_t) * cells_len);
+            index_t* const  cells     = g_allocate_array_and_memset<index_t>(allocator, cells_len, c_invalid_index);
             if (cells == nullptr)
             {
                 return nullptr;
             }
-            nmem::memset(cells, 0xFFFFFFFF, sizeof(index_t) * cells_len);
 
             const u8        grids_len = compute_max_grids(_side);
             const cell_sq_t grid_size = (cell_sq_t)_side * _size;
-            grid_t*         grids     = (grid_t*)allocator->allocate(sizeof(grid_t) * grids_len);
+            grid_t*         grids     = g_allocate_array<grid_t>(allocator, grids_len);
             if (grids == nullptr)
             {
                 allocator->deallocate(cells);
@@ -280,11 +279,11 @@ namespace ncore
             }
 
             hshg->m_allocator     = allocator;
-            hshg->m_entities      = (entity_t*)allocator->allocate(sizeof(entity_t) * _max_entities);
-            hshg->m_entities_node = (entity_node_t*)allocator->allocate(sizeof(entity_node_t) * _max_entities);
-            hshg->m_entities_cell = (cell_sq_t*)allocator->allocate(sizeof(cell_sq_t) * _max_entities);
-            hshg->m_entities_grid = (u8*)allocator->allocate(sizeof(u8) * _max_entities);
-            hshg->m_entities_ref  = (index_t*)allocator->allocate(sizeof(index_t) * _max_entities);
+            hshg->m_entities      = g_allocate_array<entity_t>(allocator, _max_entities);
+            hshg->m_entities_node = g_allocate_array<entity_node_t>(allocator, _max_entities);
+            hshg->m_entities_cell = g_allocate_array<cell_sq_t>(allocator, _max_entities);
+            hshg->m_entities_grid = g_allocate_array<u8>(allocator, _max_entities);
+            hshg->m_entities_ref  = g_allocate_array<index_t>(allocator, _max_entities);
             if (hshg->m_entities == nullptr || hshg->m_entities_node == nullptr || hshg->m_entities_grid == nullptr)
             {
                 hshg_free(hshg);

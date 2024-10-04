@@ -169,8 +169,8 @@ UNITTEST_SUITE_BEGIN(test_hierarchical_spatial_hashgrid)
             nhshg::hshg_t* hshg = nhshg::hshg_create(Allocator, 32, 32, 32);
             CHECK_NOT_NULL(hshg);
 
-            bool inserted = nhshg::hshg_insert(hshg, 0.0f, 0.0f, 0.0f, 1.0f, 0);
-            CHECK_TRUE(inserted);
+            nhshg::index_t entity_index  = nhshg::hshg_insert(hshg, 0.0f, 0.0f, 0.0f, 1.0f, 0);
+            CHECK_NOT_EQUAL(nhshg::c_invalid_index, entity_index);
 
             nhshg::hshg_free(hshg);
         }
@@ -178,7 +178,8 @@ UNITTEST_SUITE_BEGIN(test_hierarchical_spatial_hashgrid)
         static bool insert_object(nhshg::hshg_t * hshg, f32 x, f32 y, f32 z, f32 r)
         {
             s32 index = s_objects.get();
-            return nhshg::hshg_insert(hshg, x, y, z, r, index);
+            nhshg::index_t entity_index = nhshg::hshg_insert(hshg, x, y, z, r, index);
+            return entity_index != nhshg::c_invalid_index;
         }
 
         static bool do_check_count(s32 const* checks, s32 len) { return s_objects.check_count(checks, len); }
