@@ -16,8 +16,6 @@ tags
 !*.h
 !*.inl
 
-!*.build
-
 !*.go
 !*.lua
 
@@ -37,5 +35,6 @@ tags
 !*.md
 !*.jpg
 !*.png
+!*.pdf
 
 #except the following folders
