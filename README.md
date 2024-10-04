@@ -1,6 +1,6 @@
 # chshg
 
-3D Hierarchical Spatial HashGrid C++ library.
+3D Hierarchical Spatial HashGrid C++ library, based on [this paper](docs/HierarchicalSpatialHashGrid.pdf).
 
 ## TODO
 
