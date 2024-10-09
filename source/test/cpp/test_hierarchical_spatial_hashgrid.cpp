@@ -145,7 +145,7 @@ UNITTEST_SUITE_BEGIN(test_hierarchical_spatial_hashgrid)
             s_objects.init();
             s_update_handler.reset();
             s_collision_handler.reset();
-            s_update_handler.m_objects = &s_objects;
+            s_update_handler.m_objects    = &s_objects;
             s_collision_handler.m_objects = &s_objects;
         }
 
@@ -169,7 +169,7 @@ UNITTEST_SUITE_BEGIN(test_hierarchical_spatial_hashgrid)
             nhshg::hshg_t* hshg = nhshg::hshg_create(Allocator, 32, 32, 32);
             CHECK_NOT_NULL(hshg);
 
-            nhshg::index_t entity_index  = nhshg::hshg_insert(hshg, 0.0f, 0.0f, 0.0f, 1.0f, 0);
+            nhshg::index_t entity_index = nhshg::hshg_insert(hshg, 0.0f, 0.0f, 0.0f, 1.0f, 0);
             CHECK_NOT_EQUAL(nhshg::c_invalid_index, entity_index);
 
             nhshg::hshg_free(hshg);
@@ -177,14 +177,30 @@ UNITTEST_SUITE_BEGIN(test_hierarchical_spatial_hashgrid)
 
         static bool insert_object(nhshg::hshg_t * hshg, f32 x, f32 y, f32 z, f32 r)
         {
-            s32 index = s_objects.get();
+            s32            index        = s_objects.get();
             nhshg::index_t entity_index = nhshg::hshg_insert(hshg, x, y, z, r, index);
             return entity_index != nhshg::c_invalid_index;
         }
 
         static bool do_check_count(s32 const* checks, s32 len) { return s_objects.check_count(checks, len); }
 
-#define check_count(checks) do_check_count(checks, sizeof(checks) / sizeof(checks[0]))
+        static inline bool check_count(s32 a)
+        {
+            s32 checks[] = {a};
+            return do_check_count(checks, sizeof(checks) / sizeof(checks[0]));
+        }
+
+        static inline bool check_count(s32 a, s32 b)
+        {
+            s32 checks[] = {a, b};
+            return do_check_count(checks, sizeof(checks) / sizeof(checks[0]));
+        }
+
+        static inline bool check_count(s32 a, s32 b, s32 c)
+        {
+            s32 checks[] = {a, b, c};
+            return do_check_count(checks, sizeof(checks) / sizeof(checks[0]));
+        }
 
         static s32 do_check_collisions(nhshg::hshg_t * hshg)
         {
@@ -215,15 +231,15 @@ UNITTEST_SUITE_BEGIN(test_hierarchical_spatial_hashgrid)
 
             CHECK_TRUE(insert_object(hshg, 0.0f, 0.0f, 0.0f, 1.0f));
             CHECK_EQUAL(0, do_check_collisions(hshg));
-            CHECK_TRUE(check_count(((int[]){0})))
+            CHECK_TRUE(check_count(0))
 
             CHECK_TRUE(insert_object(hshg, 0.0f, 5.0f, 0.0f, 3.0f));
             CHECK_EQUAL(0, do_check_collisions(hshg));
-            CHECK_TRUE(check_count(((int[]){0, 0})))
+            CHECK_TRUE(check_count(0, 0))
 
             CHECK_TRUE(insert_object(hshg, 2.0f, 1.0f, 2.0f, 2.0f));
             CHECK_EQUAL(2, do_check_collisions(hshg));
-            CHECK_TRUE(check_count(((int[]){1, 1, 2})))
+            CHECK_TRUE(check_count(1, 1, 2))
 
             nhshg::hshg_free(hshg);
         }
