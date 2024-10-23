@@ -1,4 +1,5 @@
 #include "cbase/c_allocator.h"
+#include "cbase/c_binmap.h"
 #include "cbase/c_debug.h"
 #include "cbase/c_integer.h"
 #include "cbase/c_float.h"
@@ -290,8 +291,9 @@ namespace ncore
                 return nullptr;
             }
 
-            hshg->m_free_entities.init_all_used(_max_entities, allocator);
-            hshg->m_used_entities.init_all_free(_max_entities, allocator);
+            binmap_t::config_t cfg = binmap_t::config_t::compute(_max_entities);
+            hshg->m_free_entities.init_all_used(cfg, allocator);
+            hshg->m_used_entities.init_all_free(cfg, allocator);
 
             index_t idx   = 0;
             u32     isize = _size;
