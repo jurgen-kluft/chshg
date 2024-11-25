@@ -71,8 +71,8 @@ namespace ncore
                 {
                     return 0;
                 }
-                const u8 grid = m_cell_log - math::countLeadingZeros(rounded) + 1;
-                return math::min(grid, (u8)(m_grids_len - 1));
+                const u8 grid = m_cell_log - math::g_countLeadingZeros(rounded) + 1;
+                return math::g_min(grid, (u8)(m_grids_len - 1));
             }
 
             index_t create_entity()
@@ -193,8 +193,8 @@ namespace ncore
             , m_cells_side(_cells_side)
             , m_cells_sq((cell_sq_t)_cells_side * _cells_side)
             , m_cells_mask(_cells_side - 1)
-            , m_cells2d_log(math::countTrailingZeros(_cells_side) << 0)
-            , m_cells3d_log(math::countTrailingZeros(_cells_side) << 1)
+            , m_cells2d_log(math::g_countTrailingZeros(_cells_side) << 0)
+            , m_cells3d_log(math::g_countTrailingZeros(_cells_side) << 1)
             , m_shift(0)
             , m_inverse_cell_size((f32)1.0 / _cells_side)
             , m_entities_len(0)
@@ -231,7 +231,7 @@ namespace ncore
             , m_entities_grid(nullptr)
             , m_entities_ref(nullptr)
             , m_cells(_cells)
-            , m_cell_log(31 - math::countTrailingZeros(_size))
+            , m_cell_log(31 - math::g_countTrailingZeros(_size))
             , m_grids_len(_grids_len)
             , m_bupdating(0)
             , m_bcolliding(0)
@@ -758,8 +758,8 @@ namespace ncore
                     const cell_t cell = grid_get_cell_1d(grid, x1);
 
                     end   = grid_get_cell_1d(grid, x2);
-                    start = math::min(cell, end);
-                    end   = math::max(cell, end);
+                    start = math::g_min(cell, end);
+                    end   = math::g_max(cell, end);
 
                     break;
                 }
@@ -772,11 +772,11 @@ namespace ncore
                     if (cell & grid->m_cells_side)
                     {
                         start = 0;
-                        end   = math::max(grid->m_cells_mask - (cell & grid->m_cells_mask), end);
+                        end   = math::g_max(grid->m_cells_mask - (cell & grid->m_cells_mask), end);
                     }
                     else
                     {
-                        start = math::min(cell & grid->m_cells_mask, end);
+                        start = math::g_min(cell & grid->m_cells_mask, end);
                         end   = grid->m_cells_mask;
                     }
 

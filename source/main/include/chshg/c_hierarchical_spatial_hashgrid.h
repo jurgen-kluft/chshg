@@ -64,10 +64,9 @@ namespace ncore
         hshg_t* hshg_create(alloc_t* allocator, const cell_t side, const u32 size, const u32 max_entities);
         void    hshg_free(hshg_t* const hshg);
 
-        void hshg_remove(hshg_t* hshg, index_t entity_index);
-        void hshg_move(hshg_t* hshg, index_t entity_index);
-        void hshg_resize(hshg_t* hshg, index_t entity_index);
-
+        void    hshg_remove(hshg_t* hshg, index_t entity_index);
+        void    hshg_move(hshg_t* hshg, index_t entity_index);
+        void    hshg_resize(hshg_t* hshg, index_t entity_index);
         index_t hshg_insert(hshg_t* const hshg, const f32 x, const f32 y, const f32 z, const f32 r, const index_t ref);
         void    hshg_update(hshg_t* const hshg, update_func_t* const func);
         void    hshg_update_multithread(hshg_t* const hshg, const u8 threads, const u8 idx, multi_threaded_update_func_t* const func);
