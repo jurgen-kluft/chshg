@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/jurgen-kluft/ccode/ccode-base"
+	ccode "github.com/jurgen-kluft/ccode"
 	cpkg "github.com/jurgen-kluft/chshg/package"
 )
 
